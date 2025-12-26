@@ -65,12 +65,13 @@ export default function DashboardPage() {
         </header>
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center">
-          <h2 className="text-4xl font-bold mb-4">Bienvenido a tu Panel</h2>
+          <h2 className="text-4xl font-bold mb-4">Bienvenido a tu panel</h2>
           <p className="text-lg text-muted-foreground mb-4">
-            Hola, {user.displayName || user.email}!
+            Hola, {user.displayName || user.email}
           </p>
            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-           Desde aquí podrás gestionar tus CVs guardados y tu perfil de usuario. ¡Próximamente!
+           Desde aquí podrás gestionar tus currículums guardados y la configuración de tu perfil.
+           Nuevas funcionalidades estarán disponibles próximamente.
           </p>
         </div>
       </main>
