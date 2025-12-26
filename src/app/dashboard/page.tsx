@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, Home, Plus, MoreVertical, Pencil, Copy, Trash2, Download, Star } from 'lucide-react';
 import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, addDoc, serverTimestamp, deleteDoc, doc, getDocs, writeBatch } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,12 +26,12 @@ export default function DashboardPage() {
   const router = useRouter();
   const firestore = useFirestore();
 
-  const cvsCollectionRef = useMemo(() => {
+  const cvsCollectionRef = useMemoFirebase(() => {
     if (!user?.uid || !firestore) return null;
     return collection(firestore, 'users', user.uid, 'cvs');
   }, [user?.uid, firestore]);
 
-  const { data: cvs, isLoading: isLoadingCvs } = useCollection(cvsCollectionRef as any);
+  const { data: cvs, isLoading: isLoadingCvs } = useCollection(cvsCollectionRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {

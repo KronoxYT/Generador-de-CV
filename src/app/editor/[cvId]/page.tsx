@@ -10,7 +10,7 @@ import { type CvData, cvDataSchema } from '@/lib/types';
 import Link from 'next/link';
 import { UserButton } from '@/components/auth/user-button';
 import { useDoc } from '@/firebase/firestore/use-doc';
-import { useUser, useFirestore } from '@/firebase';
+import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
@@ -91,14 +91,14 @@ function EditorPageContent() {
   const [templateColor, setTemplateColor] = useState('#64B5F6');
   const [font, setFont] = useState<'poppins' | 'pt-sans' | 'inter'>('poppins');
   
-  const cvDocRef = useMemo(() => {
+  const cvDocRef = useMemoFirebase(() => {
     if (user?.user?.uid && cvId && firestore) {
       return doc(firestore, `users/${user.user.uid}/cvs/${cvId}`);
     }
     return null;
   }, [user?.user?.uid, cvId, firestore]);
 
-  const { data: cvData, isLoading: isLoadingCv } = useDoc<CvData>(cvDocRef as any);
+  const { data: cvData, isLoading: isLoadingCv } = useDoc<CvData>(cvDocRef);
 
   const methods = useForm<CvData>({
     resolver: zodResolver(cvDataSchema),
