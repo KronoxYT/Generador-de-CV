@@ -5,10 +5,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import CvEditor from '@/components/cv-editor';
 import CvPreview from '@/components/cv-preview';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Home, LogIn } from 'lucide-react';
+import { Download, FileText, Home } from 'lucide-react';
 import { type CvData, cvDataSchema } from '@/lib/types';
 import { initialData } from '@/lib/initial-data';
 import Link from 'next/link';
+import { UserButton } from '@/components/auth/user-button';
 
 export default function EditorPage() {
   const [templateColor, setTemplateColor] = useState('#64B5F6');
@@ -49,12 +50,7 @@ export default function EditorPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Download PDF
                 </Button>
-                 <Link href="/login" passHref>
-                   <Button variant="outline" className="font-headline">
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Iniciar sesión
-                  </Button>
-                </Link>
+                 <UserButton />
               </div>
             </div>
           </div>
