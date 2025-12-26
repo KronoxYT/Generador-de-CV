@@ -201,7 +201,10 @@ export default function Home() {
 
       <footer className="bg-card border-t py-6">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground text-sm">
-          <p>&copy; 2025 MeaCore-Enterprise. Todos los derechos reservados.</p>
+          <div className="flex justify-center gap-4">
+            <p>&copy; 2025 MeaCore-Enterprise. Todos los derechos reservados.</p>
+            <Link href="/legal" className="hover:underline">Términos y Política de Privacidad</Link>
+          </div>
         </div>
       </footer>
     </div>
