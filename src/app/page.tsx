@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { FileText, ChevronRight } from 'lucide-react';
+import { FileText, ChevronRight, LogIn } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -13,6 +13,14 @@ export default function Home() {
               <h1 className="text-2xl font-bold font-headline text-foreground">
                 VitaeForge
               </h1>
+            </div>
+             <div className='flex gap-4'>
+               <Link href="/login" passHref>
+                 <Button variant="outline" className="font-headline">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Iniciar sesión
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
