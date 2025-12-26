@@ -1,59 +1,45 @@
-'use client';
-import { useState } from 'react';
-import { FormProvider, useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import CvEditor from '@/components/cv-editor';
-import CvPreview from '@/components/cv-preview';
 import { Button } from '@/components/ui/button';
-import { Download, FileText } from 'lucide-react';
-import { type CvData, cvDataSchema } from '@/lib/types';
-import { initialData } from '@/lib/initial-data';
+import { FileText, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
-  const [templateColor, setTemplateColor] = useState('#64B5F6');
-  const [font, setFont] = useState<'poppins' | 'pt-sans' | 'inter'>('poppins');
-
-  const methods = useForm<CvData>({
-    resolver: zodResolver(cvDataSchema),
-    defaultValues: initialData,
-    mode: 'onBlur',
-  });
-
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
-    <FormProvider {...methods}>
-      <div className="min-h-screen bg-background">
-        <header id="header-panel" className="bg-card border-b sticky top-0 z-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center gap-3">
-                <FileText className="h-8 w-8 text-primary" />
-                <h1 className="text-2xl font-bold font-headline text-foreground">
-                  VitaeForge
-                </h1>
-              </div>
-              <Button onClick={handlePrint} className="font-headline">
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
+    <div className="flex flex-col min-h-screen bg-background">
+      <header className="bg-card border-b">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl font-bold font-headline text-foreground">
+                VitaeForge
+              </h1>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div id="editor-panel" className="w-full">
-              <CvEditor setTemplateColor={setTemplateColor} setFont={font => setFont(font as any)} />
-            </div>
-            <div id="preview-panel" className="w-full lg:sticky lg:top-24">
-               <CvPreview templateColor={templateColor} font={font}/>
-            </div>
-          </div>
-        </main>
-      </div>
-    </FormProvider>
+      <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-16 flex items-center">
+        <div className="w-full text-center">
+          <h2 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-4">
+            Crea un CV profesional en minutos
+          </h2>
+          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            VitaeForge te ayuda a crear, personalizar y descargar un currículum vitae pulido y profesional. Comienza con nuestra plantilla y personalízala a tu gusto.
+          </p>
+          <Link href="/editor" passHref>
+            <Button size="lg" className="font-headline">
+              Empezar a crear
+              <ChevronRight className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </main>
+
+      <footer className="bg-card border-t py-6">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground text-sm">
+          <p>&copy; {new Date().getFullYear()} VitaeForge. Todos los derechos reservados.</p>
+        </div>
+      </footer>
+    </div>
   );
 }
