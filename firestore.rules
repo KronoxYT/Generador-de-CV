@@ -1,0 +1,155 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict user-ownership model. All user-specific data,
+ * such as profiles, work experience, and skills, is nested under a path unique to that user's ID
+ * (/users/{userId}). This ensures that users can only access and modify their own data.
+ *
+ * Data Structure: The data is organized into two main areas:
+ * 1. User-Private Data: A top-level 'users' collection where each document represents a user.
+ *    Subcollections for 'workExperiences', 'educations', 'skills', and 'cvTemplates' are nested
+ *    under the corresponding user document, inheriting the ownership-based security.
+ * 2. Public Data: A top-level 'templates' collection contains CV templates that are globally
+ *    readable by all users but are not writable by clients, ensuring data integrity.
+ *
+ * Key Security Decisions:
+ * - User Isolation: A user's access is strictly confined to their document tree within /users/{userId}.
+ *   They cannot read, write, or list data belonging to other users.
+ * - No User Enumeration: Listing documents in the top-level '/users' collection is explicitly
+ *   disallowed to prevent malicious actors from discovering the list of all users.
+ * - Read-Only Public Data: The '/templates' collection is public for reading and listing but is
+ *   locked down against all client write operations (create, update, delete). This content is
+ *   expected to be managed by a trusted backend service using the Admin SDK.
+ * - Relational Integrity: On creation, documents within a user's tree (e.g., a work experience)
+ *   must contain a 'userProfileId' field that matches the user's ID from the path. This field is
+ *   enforced as immutable to prevent documents from being "moved" between users.
+ *
+ * Denormalization for Authorization: The entire security model is built on path-based authorization.
+ * By nesting a user's private collections under `/users/{userId}`, we can write fast and secure
+ * rules like `isOwner(userId)` without needing slow and costly `get()` calls to other documents to
+ * verify ownership.
+ *
+ * Structural Segregation: User data (private) and template data (public) are stored in separate
+ * top-level collections. This is a secure and performant pattern that prevents accidental data
+ * leakage and simplifies rules for list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions for readable and reusable logic
+    
+    /**
+     * Checks if the user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user's UID matches the resource's owner ID.
+     * This is the primary function for enforcing user ownership.
+     * @param userId The ID of the user to check against.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * A robust check for update and delete operations. Ensures the user is the
+     * owner AND the document they are trying to modify actually exists.
+     * @param userId The ID of the user to check against.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description A user's own profile document.
+     * @path /users/{userId}
+     * @allow (create) A new user can create their own profile document if their auth UID matches the document ID.
+     * @deny (list) Another user cannot list all user profiles.
+     * @principle Restricts access to a user's own data tree and prevents user enumeration.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // Disallow listing all users to prevent enumeration attacks.
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description A user's work experience entries.
+       * @path /users/{userId}/workExperiences/{workExperienceId}
+       * @allow (create) A signed-in user can add a work experience to their own profile.
+       * @deny (get) A user cannot read another user's work experience.
+       * @principle Enforces strict ownership for all subcollection data.
+       */
+      match /workExperiences/{workExperienceId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description A user's education entries.
+       * @path /users/{userId}/educations/{educationId}
+       * @allow (list) A signed-in user can list their own education history.
+       * @deny (create) A user cannot add an education entry to another user's profile.
+       * @principle Enforces strict ownership for all subcollection data.
+       */
+      match /educations/{educationId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description A user's skills.
+       * @path /users/{userId}/skills/{skillId}
+       * @allow (update) A signed-in user can update a skill in their own profile.
+       * @deny (delete) A user cannot delete a skill from another user's profile.
+       * @principle Enforces strict ownership for all subcollection data.
+       */
+      match /skills/{skillId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description The association between a user and a CV template they have chosen.
+       * @path /users/{userId}/cvTemplates/{cvTemplateId}
+       * @allow (create) A signed-in user can associate a template with their own profile.
+       * @deny (get) A user cannot view the template associations of another user.
+       * @principle Enforces strict ownership for all subcollection data.
+       */
+      match /cvTemplates/{cvTemplateId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userProfileId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    /**
+     * @description Globally available CV templates.
+     * @path /templates/{templateId}
+     * @allow (get) Any user, signed in or not, can read a template.
+     * @deny (create) No client can create, update, or delete templates. This must be done via a trusted server.
+     * @principle Provides public read access to global data while protecting it from modification.
+     */
+    match /templates/{templateId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}

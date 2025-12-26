@@ -1,0 +1,363 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user's profile in the VitaeForge application, containing personal information, contact details, and preferences.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "The user's first name."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "The user's last name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's phone number."
+        },
+        "address": {
+          "type": "string",
+          "description": "The user's physical address."
+        },
+        "linkedInUrl": {
+          "type": "string",
+          "description": "The URL to the user's LinkedIn profile.",
+          "format": "uri"
+        },
+        "githubUrl": {
+          "type": "string",
+          "description": "The URL to the user's GitHub profile.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "email"
+      ]
+    },
+    "WorkExperience": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "WorkExperience",
+      "type": "object",
+      "description": "Represents a user's work experience entry in their CV.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the WorkExperience entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N WorkExperience)"
+        },
+        "jobTitle": {
+          "type": "string",
+          "description": "The user's job title at the company."
+        },
+        "companyName": {
+          "type": "string",
+          "description": "The name of the company where the user worked."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the employment.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The end date of the employment. Can be null if currently employed.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the user's responsibilities and achievements at the company."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "jobTitle",
+        "companyName",
+        "startDate"
+      ]
+    },
+    "Education": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Education",
+      "type": "object",
+      "description": "Represents a user's educational background in their CV.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Education entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Education)"
+        },
+        "institutionName": {
+          "type": "string",
+          "description": "The name of the educational institution."
+        },
+        "degree": {
+          "type": "string",
+          "description": "The degree earned by the user."
+        },
+        "major": {
+          "type": "string",
+          "description": "The user's major field of study."
+        },
+        "graduationDate": {
+          "type": "string",
+          "description": "The date of graduation.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the user's studies and achievements at the institution."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "institutionName",
+        "degree",
+        "major",
+        "graduationDate"
+      ]
+    },
+    "Skill": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Skill",
+      "type": "object",
+      "description": "Represents a skill possessed by a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Skill entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N Skill)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the skill."
+        },
+        "level": {
+          "type": "string",
+          "description": "The user's proficiency level in the skill (e.g., Beginner, Intermediate, Expert)."
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "name",
+        "level"
+      ]
+    },
+    "Template": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Template",
+      "type": "object",
+      "description": "Represents a CV template available in the application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Template entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the template."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the template's style and suitability."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL to the template's preview image.",
+          "format": "uri"
+        },
+        "templateData": {
+          "type": "string",
+          "description": "JSON data representing the template's structure and styling."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "imageUrl",
+        "templateData"
+      ]
+    },
+    "CvTemplate": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CvTemplate",
+      "type": "object",
+      "description": "This entity defines the many-to-many relationship between UserProfile and Template.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CvTemplate entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile N:N Template)"
+        },
+        "templateId": {
+          "type": "string",
+          "description": "Reference to Template. (Relationship: UserProfile N:N Template)"
+        },
+        "dateCreated": {
+          "type": "string",
+          "description": "The date when the CV template was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "templateId",
+        "dateCreated"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information.  Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/workExperiences/{workExperienceId}",
+        "definition": {
+          "entityName": "WorkExperience",
+          "schema": {
+            "$ref": "#/backend/entities/WorkExperience"
+          },
+          "description": "Stores user's work experience entries. Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "workExperienceId",
+              "description": "The unique identifier for the work experience entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/educations/{educationId}",
+        "definition": {
+          "entityName": "Education",
+          "schema": {
+            "$ref": "#/backend/entities/Education"
+          },
+          "description": "Stores user's education entries. Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "educationId",
+              "description": "The unique identifier for the education entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/skills/{skillId}",
+        "definition": {
+          "entityName": "Skill",
+          "schema": {
+            "$ref": "#/backend/entities/Skill"
+          },
+          "description": "Stores user's skills. Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "skillId",
+              "description": "The unique identifier for the skill."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/templates/{templateId}",
+        "definition": {
+          "entityName": "Template",
+          "schema": {
+            "$ref": "#/backend/entities/Template"
+          },
+          "description": "Stores CV templates. Globally accessible, read-only for users. Admin-writeable.",
+          "params": [
+            {
+              "name": "templateId",
+              "description": "The unique identifier for the template."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/cvTemplates/{cvTemplateId}",
+        "definition": {
+          "entityName": "CvTemplate",
+          "schema": {
+            "$ref": "#/backend/entities/CvTemplate"
+          },
+          "description": "Stores the association between a user and a CV template. Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "cvTemplateId",
+              "description": "The unique identifier for the CvTemplate entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. User profiles and related data (work experience, education, skills) are stored under the `/users/{userId}` path, ensuring path-based ownership. Templates are stored in a separate top-level collection `/templates` because they are global and not user-specific.  The `CvTemplate` entity, representing the relationship between users and templates, is also stored under `/users/{userId}/cvTemplates/{cvTemplateId}` to maintain ownership. This design facilitates simple and robust security rules.\n\n**Authorization Independence:** Authorization independence is achieved by avoiding `get()` calls in security rules. Since user-specific data (work experience, education, skills, cvTemplates) is stored under the `/users/{userId}` path, ownership is directly verifiable via `request.auth.uid == userId` in security rules. There's no need to fetch parent document data to authorize access to child documents.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations because each collection has a homogeneous security posture. For example, listing documents under `/users/{userId}/workExperiences` is secure because all documents in that collection belong to the user identified by `userId`. Similarly, listing templates in the `/templates` collection requires no filtering based on user-specific criteria.\n\nTemplates are global and read-only for users, thus existing outside the user hierarchy. This segregation is very important."
+  }
+}
