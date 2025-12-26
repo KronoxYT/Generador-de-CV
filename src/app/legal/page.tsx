@@ -48,7 +48,7 @@ export default function LegalPage() {
             <p>La Plataforma ofrece planes gratuitos y de pago. Las funcionalidades disponibles dependen del plan contratado. Los pagos no son reembolsables salvo obligación legal.</p>
             
             <h3>5. Uso aceptable</h3>
-            <p>El usuario se compromete a no:</p>
+            <p>El usuario se comete a no:</p>
             <ul>
               <li>Usar la plataforma con fines ilegales.</li>
               <li>Intentar acceder a sistemas internos o datos de otros usuarios.</li>
@@ -65,7 +65,7 @@ export default function LegalPage() {
             <p>Podemos actualizar estos términos en cualquier momento. El uso continuado implica aceptación.</p>
           </section>
 
-          <section>
+          <section className="mt-12">
             <h2>🔐 POLÍTICA DE PRIVACIDAD</h2>
 
             <h3>1. Información que recopilamos</h3>
@@ -92,12 +92,12 @@ export default function LegalPage() {
             <p>Esta política puede actualizarse. La fecha de modificación será visible.</p>
           </section>
 
-          <section>
+          <section className="mt-12">
             <h2>⚖️ AVISO LEGAL</h2>
             <p>VitaeForge es un producto desarrollado por MeaCore-Enterprise. El uso de esta plataforma es bajo responsabilidad del usuario. No ofrecemos asesoría legal, laboral ni de recursos humanos. VitaeForge no se responsabiliza por decisiones tomadas por terceros basadas en los CV generados.</p>
           </section>
 
-          <section>
+          <section className="mt-12">
             <h2>❓ PREGUNTAS FRECUENTES (FAQ)</h2>
             
             <h3>¿Necesito pagar para usar VitaeForge?</h3>
