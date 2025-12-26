@@ -37,7 +37,7 @@ export default function Home() {
 
       <footer className="bg-card border-t py-6">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center text-muted-foreground text-sm">
-          <p>&copy; {new Date().getFullYear()} VitaeForge. Todos los derechos reservados.</p>
+          <p>&copy; 2025 MeaCore-Enterprise. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>
