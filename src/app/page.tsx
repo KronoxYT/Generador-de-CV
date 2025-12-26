@@ -1,19 +1,33 @@
+'use client';
+
 import { Button } from '@/components/ui/button';
 import { FileText, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { UserButton } from '@/components/auth/user-button';
+import { useUser } from '@/firebase';
 
 export default function Home() {
+  const { user, isUserLoading } = useUser();
+
+  const getEditorLink = () => {
+    if (isUserLoading) {
+      return '#'; // Or a disabled state while loading
+    }
+    return user ? '/editor' : '/login';
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <header className="bg-card border-b">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-3">
-              <FileText className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold font-headline text-foreground">
-                VitaeForge
-              </h1>
+               <Link href="/" className="flex items-center gap-3">
+                <FileText className="h-8 w-8 text-primary" />
+                <h1 className="text-2xl font-bold font-headline text-foreground">
+                  VitaeForge
+                </h1>
+              </Link>
             </div>
              <div className='flex gap-4'>
                <UserButton />
@@ -30,10 +44,10 @@ export default function Home() {
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
             VitaeForge te ayuda a crear, personalizar y descargar un currículum vitae pulido y profesional. Comienza con nuestra plantilla y personalízala a tu gusto.
           </p>
-          <Link href="/editor" passHref>
-            <Button size="lg" className="font-headline">
-              Empezar a crear
-              <ChevronRight className="ml-2 h-5 w-5" />
+          <Link href={getEditorLink()} passHref>
+            <Button size="lg" className="font-headline" disabled={isUserLoading}>
+              {isUserLoading ? 'Cargando...' : 'Empezar a crear'}
+              {!isUserLoading && <ChevronRight className="ml-2 h-5 w-5" />}
             </Button>
           </Link>
         </div>
