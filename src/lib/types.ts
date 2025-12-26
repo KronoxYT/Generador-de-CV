@@ -34,12 +34,14 @@ export const skillSchema = z.object({
 });
 
 export const cvDataSchema = z.object({
+  name: z.string().optional(),
   personal: personalDetailsSchema,
   summary: z.string(),
   experience: z.array(experienceSchema),
   education: z.array(educationSchema),
   skills: z.array(skillSchema),
   font: z.string().optional(),
+  lastEdited: z.any().optional(), // Allow serverTimestamp
 });
 
 export type PersonalDetails = z.infer<typeof personalDetailsSchema>;

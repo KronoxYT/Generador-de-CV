@@ -17,12 +17,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from 'use-debounce';
 
 function AutoSaver() {
-  const { control, getValues, formState: { isDirty, dirtyFields } } = useFormContext<CvData>();
+  const { control, getValues, formState: { isDirty } } = useFormContext<CvData>();
   const { cvId } = useParams() as { cvId: string };
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSaved, setHasSaved] = useState(true);
 
   const values = getValues();
   const [debouncedValues] = useDebounce(values, 1500);
@@ -31,17 +32,16 @@ function AutoSaver() {
     const saveData = async () => {
       if (isDirty && user && cvId && firestore) {
         setIsSaving(true);
+        setHasSaved(false);
         const docRef = doc(firestore, 'users', user.uid, 'cvs', cvId);
         try {
+          // Use debouncedValues to ensure we're not saving on every keystroke
           const dataToSave = {
             ...debouncedValues,
             lastEdited: serverTimestamp(),
           };
           await setDoc(docRef, dataToSave, { merge: true });
-          toast({
-            title: 'Guardado',
-            description: 'Tus cambios se han guardado automáticamente.',
-          });
+          
         } catch (error) {
           console.error("Error saving document: ", error);
           toast({
@@ -51,6 +51,7 @@ function AutoSaver() {
           });
         } finally {
           setIsSaving(false);
+          setHasSaved(true);
         }
       }
     };
@@ -67,12 +68,16 @@ function AutoSaver() {
     );
   }
 
-  return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Save className="h-4 w-4" />
-      <span>Cambios guardados</span>
-    </div>
-  );
+  if(!isDirty && hasSaved){
+     return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Save className="h-4 w-4" />
+        <span>Todos los cambios guardados</span>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 
@@ -116,21 +121,21 @@ function EditorPageContent() {
   }, [user.isUserLoading, user.user, router]);
   
   const handlePrint = () => {
-    window.print();
+    // We need to trigger the print after ensuring the state has been updated
+    setTimeout(() => window.print(), 100);
   };
 
   useEffect(() => {
-    if(searchParams.get('print') === 'true') {
-        setTimeout(() => {
-            handlePrint();
-        }, 500);
+    if(searchParams.get('print') === 'true' && !isLoadingCv) {
+        handlePrint();
     }
-  }, [searchParams]);
+  }, [searchParams, isLoadingCv]);
 
-  if (isLoadingCv || user.isUserLoading) {
+  if (isLoadingCv || user.isUserLoading || !cvData) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <p>Cargando editor...</p>
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <p className='ml-4 text-lg'>Cargando editor...</p>
       </div>
     );
   }
@@ -186,7 +191,5 @@ function EditorPageContent() {
 
 
 export default function EditorPageWrapper() {
-  // useParams can only be used in a Client Component that is a descendant of a page, not the page itself.
-  // So we wrap the main content in another component.
   return <EditorPageContent />;
 }

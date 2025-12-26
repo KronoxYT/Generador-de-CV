@@ -205,35 +205,52 @@
         "templateData"
       ]
     },
-    "CvTemplate": {
+    "CV": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "CvTemplate",
+      "title": "CV",
       "type": "object",
-      "description": "This entity defines the many-to-many relationship between UserProfile and Template.",
+      "description": "Represents a single CV document created by a user.",
       "properties": {
-        "id": {
+        "name": {
           "type": "string",
-          "description": "Unique identifier for the CvTemplate entity."
+          "description": "The user-defined name for the CV (e.g., 'CV for Software Engineer')."
         },
-        "userProfileId": {
+        "lastEdited": {
           "type": "string",
-          "description": "Reference to UserProfile. (Relationship: UserProfile N:N Template)"
+          "format": "date-time",
+          "description": "Timestamp of the last modification."
         },
-        "templateId": {
-          "type": "string",
-          "description": "Reference to Template. (Relationship: UserProfile N:N Template)"
+        "personal": {
+          "type": "object"
         },
-        "dateCreated": {
-          "type": "string",
-          "description": "The date when the CV template was created.",
-          "format": "date-time"
+        "summary": {
+          "type": "string"
+        },
+        "experience": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "education": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "skills": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "font": {
+          "type": "string"
         }
       },
       "required": [
-        "id",
-        "userProfileId",
-        "templateId",
-        "dateCreated"
+        "name",
+        "lastEdited"
       ]
     }
   },
@@ -262,61 +279,21 @@
         }
       },
       {
-        "path": "/users/{userId}/workExperiences/{workExperienceId}",
+        "path": "/users/{userId}/cvs/{cvId}",
         "definition": {
-          "entityName": "WorkExperience",
+          "entityName": "CV",
           "schema": {
-            "$ref": "#/backend/entities/WorkExperience"
+            "$ref": "#/backend/entities/CV"
           },
-          "description": "Stores user's work experience entries. Owned by the user. Authorization: `request.auth.uid == userId`.",
+          "description": "Stores a user's CV document. Owned by the user. Authorization: `request.auth.uid == userId`.",
           "params": [
             {
               "name": "userId",
               "description": "The unique identifier for the user."
             },
             {
-              "name": "workExperienceId",
-              "description": "The unique identifier for the work experience entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/educations/{educationId}",
-        "definition": {
-          "entityName": "Education",
-          "schema": {
-            "$ref": "#/backend/entities/Education"
-          },
-          "description": "Stores user's education entries. Owned by the user. Authorization: `request.auth.uid == userId`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "educationId",
-              "description": "The unique identifier for the education entry."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/skills/{skillId}",
-        "definition": {
-          "entityName": "Skill",
-          "schema": {
-            "$ref": "#/backend/entities/Skill"
-          },
-          "description": "Stores user's skills. Owned by the user. Authorization: `request.auth.uid == userId`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "skillId",
-              "description": "The unique identifier for the skill."
+              "name": "cvId",
+              "description": "The unique identifier for the CV."
             }
           ]
         }
@@ -336,28 +313,8 @@
             }
           ]
         }
-      },
-      {
-        "path": "/users/{userId}/cvTemplates/{cvTemplateId}",
-        "definition": {
-          "entityName": "CvTemplate",
-          "schema": {
-            "$ref": "#/backend/entities/CvTemplate"
-          },
-          "description": "Stores the association between a user and a CV template. Owned by the user. Authorization: `request.auth.uid == userId`.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "cvTemplateId",
-              "description": "The unique identifier for the CvTemplate entry."
-            }
-          ]
-        }
       }
     ],
-    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, following the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. User profiles and related data (work experience, education, skills) are stored under the `/users/{userId}` path, ensuring path-based ownership. Templates are stored in a separate top-level collection `/templates` because they are global and not user-specific.  The `CvTemplate` entity, representing the relationship between users and templates, is also stored under `/users/{userId}/cvTemplates/{cvTemplateId}` to maintain ownership. This design facilitates simple and robust security rules.\n\n**Authorization Independence:** Authorization independence is achieved by avoiding `get()` calls in security rules. Since user-specific data (work experience, education, skills, cvTemplates) is stored under the `/users/{userId}` path, ownership is directly verifiable via `request.auth.uid == userId` in security rules. There's no need to fetch parent document data to authorize access to child documents.\n\n**QAPs (Rules are not Filters):** The structure supports secure `list` operations because each collection has a homogeneous security posture. For example, listing documents under `/users/{userId}/workExperiences` is secure because all documents in that collection belong to the user identified by `userId`. Similarly, listing templates in the `/templates` collection requires no filtering based on user-specific criteria.\n\nTemplates are global and read-only for users, thus existing outside the user hierarchy. This segregation is very important."
+    "reasoning": "The Firestore data structure is designed to be secure and scalable. User-specific data, including their CVs, are stored in a subcollection under their unique user ID (`/users/{userId}/cvs/{cvId}`), ensuring that a user can only access their own data through path-based security rules. This avoids costly and insecure `get()` calls in rules. Global data, like CV templates, is stored in a separate top-level collection (`/templates`) with read-only access for all users, protecting its integrity."
   }
 }

@@ -57,7 +57,7 @@ const AiRefineButton = ({ fieldName }: { fieldName: any }) => {
       const content = getValues(fieldName);
       const result = await refineWithAI(content);
       if (result.refinedContent) {
-        setValue(fieldName, result.refinedContent, { shouldValidate: true });
+        setValue(fieldName, result.refinedContent, { shouldValidate: true, shouldDirty: true });
         toast({
           title: "Content Refined",
           description: "Your content has been successfully refined with AI.",
@@ -121,7 +121,20 @@ export default function CvEditor({ setTemplateColor, setFont }: CvEditorProps) {
         <TabsTrigger value="design">Design</TabsTrigger>
       </TabsList>
       <TabsContent value="content">
-        <Accordion type="multiple" defaultValue={['item-1']} className="w-full mt-4">
+        <Accordion type="multiple" defaultValue={['item-0', 'item-1']} className="w-full mt-4">
+          <AccordionItem value="item-0">
+            <AccordionTrigger>
+              <div className="flex items-center gap-3">
+                <Pen /> <span className="font-headline">CV Details</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="p-4 bg-card rounded-b-lg">
+              <div className="space-y-2">
+                  <Label htmlFor="name">CV Name</Label>
+                  <Input id="name" {...register('name')} placeholder="e.g. CV for Software Engineer role" />
+                </div>
+            </AccordionContent>
+          </AccordionItem>
           <AccordionItem value="item-1">
             <AccordionTrigger>
               <div className="flex items-center gap-3">
