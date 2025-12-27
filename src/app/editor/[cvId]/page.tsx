@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { FormProvider, useForm, useFormContext } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import CvEditor from '@/components/cv-editor';
@@ -9,9 +9,7 @@ import { Download, FileText, Home, Loader2, Save } from 'lucide-react';
 import { type CvData, cvDataSchema } from '@/lib/types';
 import Link from 'next/link';
 import { UserButton } from '@/components/auth/user-button';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useUser, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { useUser, useSupabase } from '@/firebase';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from 'use-debounce';
@@ -19,7 +17,7 @@ import { useDebounce } from 'use-debounce';
 function AutoSaver() {
   const { control, getValues, formState: { isDirty } } = useFormContext<CvData>();
   const { cvId } = useParams() as { cvId: string };
-  const firestore = useFirestore();
+  const supabase = useSupabase();
   const { user } = useUser();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
@@ -30,18 +28,15 @@ function AutoSaver() {
 
   useEffect(() => {
     const saveData = async () => {
-      if (isDirty && user && cvId && firestore) {
+      if (isDirty && user && cvId) {
         setIsSaving(true);
         setHasSaved(false);
-        const docRef = doc(firestore, 'users', user.uid, 'cvs', cvId);
         try {
-          // Use debouncedValues to ensure we're not saving on every keystroke
-          const dataToSave = {
-            ...debouncedValues,
-            lastEdited: serverTimestamp(),
-          };
-          await setDoc(docRef, dataToSave, { merge: true });
-          
+          const { error } = await supabase
+            .from('cvs')
+            .update({ content: debouncedValues })
+            .eq('id', cvId);
+          if (error) throw error;
         } catch (error) {
           console.error("Error saving document: ", error);
           toast({
@@ -57,7 +52,7 @@ function AutoSaver() {
     };
 
     saveData();
-  }, [debouncedValues, isDirty, user, cvId, firestore, toast]);
+  }, [debouncedValues, isDirty, user, cvId, supabase, toast]);
 
   if (isSaving) {
     return (
@@ -84,21 +79,30 @@ function AutoSaver() {
 function EditorPageContent() {
   const { cvId } = useParams() as { cvId: string };
   const user = useUser();
-  const firestore = useFirestore();
+  const supabase = useSupabase();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [templateColor, setTemplateColor] = useState('#64B5F6');
   const [font, setFont] = useState<'poppins' | 'pt-sans' | 'inter'>('poppins');
-  
-  const cvDocRef = useMemoFirebase(() => {
-    if (user?.user?.uid && cvId && firestore) {
-      return doc(firestore, `users/${user.user.uid}/cvs/${cvId}`);
-    }
-    return null;
-  }, [user?.user?.uid, cvId, firestore]);
+  const [cvData, setCvData] = useState<CvData | null>(null);
+  const [isLoadingCv, setIsLoadingCv] = useState(true);
 
-  const { data: cvData, isLoading: isLoadingCv } = useDoc<CvData>(cvDocRef);
+  useEffect(() => {
+    const loadCv = async () => {
+      if (!cvId || !supabase) return;
+      setIsLoadingCv(true);
+      const { data, error } = await supabase.from('cvs').select('id,title,content,created_at,user_id').eq('id', cvId).single();
+      if (error) {
+        console.error('Error loading CV:', error);
+        setCvData(null);
+      } else {
+        setCvData((data?.content as CvData) || null);
+      }
+      setIsLoadingCv(false);
+    };
+    loadCv();
+  }, [cvId, supabase]);
 
   const methods = useForm<CvData>({
     resolver: zodResolver(cvDataSchema),
@@ -188,7 +192,6 @@ function EditorPageContent() {
     </FormProvider>
   );
 }
-
 
 export default function EditorPageWrapper() {
   return <EditorPageContent />;

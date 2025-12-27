@@ -1,14 +1,11 @@
 'use client';
 
-import { useUser } from '@/firebase';
+import { useUser, useSupabase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { FileText, Home, Plus, MoreVertical, Pencil, Copy, Trash2, Download, Star } from 'lucide-react';
-import { useCollection } from '@/firebase/firestore/use-collection';
-import { collection, addDoc, serverTimestamp, deleteDoc, doc } from 'firebase/firestore';
-import { useFirestore, useMemoFirebase } from '@/firebase';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,14 +21,9 @@ import { es } from 'date-fns/locale';
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const firestore = useFirestore();
-
-  const cvsCollectionRef = useMemoFirebase(() => {
-    if (!user?.uid || !firestore) return null;
-    return collection(firestore, 'users', user.uid, 'cvs');
-  }, [user?.uid, firestore]);
-
-  const { data: cvs, isLoading: isLoadingCvs } = useCollection(cvsCollectionRef);
+  const supabase = useSupabase();
+  const [cvs, setCvs] = useState<any[] | null>(null);
+  const [isLoadingCvs, setIsLoadingCvs] = useState(true);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -39,48 +31,72 @@ export default function DashboardPage() {
     }
   }, [user, isUserLoading, router]);
 
+  useEffect(() => {
+    const fetchCvs = async () => {
+      if (!user || !supabase) return;
+      setIsLoadingCvs(true);
+      const { data, error } = await supabase
+        .from('cvs')
+        .select('id,title,content,created_at')
+        .eq('user_id', user.uid)
+        .order('created_at', { ascending: false });
+      if (error) {
+        console.error('Error fetching CVs:', error);
+        setCvs([]);
+      } else {
+        setCvs(data || []);
+      }
+      setIsLoadingCvs(false);
+    };
+    fetchCvs();
+  }, [supabase, user?.uid]);
+
   const handleCreateNewCv = async () => {
-    if (!cvsCollectionRef) return;
     const newCvName = `CV sin título ${cvs ? cvs.length + 1 : 1}`;
     try {
-      const docRef = await addDoc(cvsCollectionRef, {
-        name: newCvName,
-        ...initialData,
-        lastEdited: serverTimestamp(),
-      });
-      router.push(`/editor/${docRef.id}`);
+      const { data, error } = await supabase
+        .from('cvs')
+        .insert({
+          title: newCvName,
+          content: initialData,
+          user_id: user?.uid,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      router.push(`/editor/${data.id}`);
     } catch (error) {
       console.error("Error creating new CV: ", error);
     }
   };
 
   const handleDuplicateCv = async (cvId: string) => {
-    if (!firestore || !user?.uid) return;
-
-    const originalCvRef = doc(firestore, 'users', user.uid, 'cvs', cvId);
+    if (!user?.uid) return;
     const originalCvDoc = cvs?.find(cv => cv.id === cvId);
-
     if (!originalCvDoc) return;
-
     try {
-      const newCvData = {
-        ...originalCvDoc,
-        name: `${originalCvDoc.name} (copia)`,
-        lastEdited: serverTimestamp(),
-      };
-      delete (newCvData as any).id; 
-
-      await addDoc(collection(firestore, 'users', user.uid, 'cvs'), newCvData);
+      const { data, error } = await supabase
+        .from('cvs')
+        .insert({
+          title: `${originalCvDoc.title} (copia)`,
+          content: originalCvDoc.content,
+          user_id: user.uid,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      setCvs(prev => prev ? [{ id: data.id, title: `${originalCvDoc.title} (copia)`, content: originalCvDoc.content, created_at: new Date().toISOString() }, ...prev] : prev);
     } catch (error) {
       console.error("Error duplicating CV: ", error);
     }
   };
 
   const handleDeleteCv = async (cvId: string) => {
-    if (!cvsCollectionRef) return;
     if (window.confirm("¿Estás seguro de que quieres eliminar este CV?")) {
       try {
-        await deleteDoc(doc(cvsCollectionRef, cvId));
+        const { error } = await supabase.from('cvs').delete().eq('id', cvId);
+        if (error) throw error;
+        setCvs(prev => prev ? prev.filter(cv => cv.id !== cvId) : prev);
       } catch (error) {
         console.error("Error deleting CV: ", error);
       }
@@ -95,9 +111,7 @@ export default function DashboardPage() {
     );
   }
 
-  const lastEditedCv = cvs
-    ?.filter(cv => cv.lastEdited)
-    .sort((a, b) => b.lastEdited.toMillis() - a.lastEdited.toMillis())[0];
+  const lastEditedCv = cvs?.[0] ?? null;
 
   return (
     <div className="flex flex-col min-h-screen bg-muted/40">
@@ -154,7 +168,7 @@ export default function DashboardPage() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
-                            {lastEditedCv?.lastEdited ? formatDistanceToNow(lastEditedCv.lastEdited.toDate(), { addSuffix: true, locale: es }) : 'N/A'}
+                            {lastEditedCv?.created_at ? formatDistanceToNow(new Date(lastEditedCv.created_at), { addSuffix: true, locale: es }) : 'N/A'}
                         </div>
                     </CardContent>
                 </Card>
@@ -175,47 +189,47 @@ export default function DashboardPage() {
                 <h3 className="text-2xl font-bold mb-4">Mis CVs</h3>
                 {isLoadingCvs && <p>Cargando CVs...</p>}
                 {!isLoadingCvs && cvs && cvs.length > 0 ? (
-                    <div className="bg-card border rounded-lg">
-                        <div className="divide-y divide-border">
+                  <div className="bg-card border rounded-lg">
+                    <div className="divide-y divide-border">
                         {cvs.map(cv => (
-                            <div key={cv.id} className="flex items-center justify-between p-4 hover:bg-muted/50">
-                                <div className='flex-1'>
-                                    <Link href={`/editor/${cv.id}`} className='font-semibold hover:underline'>{cv.name}</Link>
-                                    <p className="text-sm text-muted-foreground">
-                                        Editado por última vez: {cv.lastEdited ? formatDistanceToNow(cv.lastEdited.toDate(), { addSuffix: true, locale: es }) : 'nunca'}
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2">
+                          <div key={cv.id} className="flex items-center justify-between p-4 hover:bg-muted/50">
+                            <div className='flex-1'>
+                                    <Link href={`/editor/${cv.id}`} className='font-semibold hover:underline'>{cv.title}</Link>
+                                  <p className="text-sm text-muted-foreground">
+                                        Editado por última vez: {cv.created_at ? formatDistanceToNow(new Date(cv.created_at), { addSuffix: true, locale: es }) : 'nunca'}
+                                  </p>
+                            </div>
+                            <div className="flex items-center gap-2">
                                      <Button variant="outline" size="sm" onClick={() => router.push(`/editor/${cv.id}`)}>
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar
-                                    </Button>
-                                    <DropdownMenu>
+                                      </Button>
+                                      <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
+                                          <Button variant="ghost" size="icon">
+                                            <MoreVertical className="h-4 w-4" />
+                                          </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuItem onClick={() => handleDuplicateCv(cv.id)}>
-                                                <Copy className="mr-2 h-4 w-4" />
-                                                Duplicar
+                                              <Copy className="mr-2 h-4 w-4" />
+                                              Duplicar
                                             </DropdownMenuItem>
                                              <DropdownMenuItem onClick={() => router.push(`/editor/${cv.id}?print=true`)}>
-                                                <Download className="mr-2 h-4 w-4" />
-                                                Descargar PDF
+                                              <Download className="mr-2 h-4 w-4" />
+                                              Descargar PDF
                                             </DropdownMenuItem>
                                             <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteCv(cv.id)}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar
+                                              <Trash2 className="mr-2 h-4 w-4" />
+                                              Eliminar
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </div>
+                                      </DropdownMenu>
                             </div>
+                          </div>
                         ))}
-                        </div>
                     </div>
+                  </div>
                 ) : (
                     !isLoadingCvs && (
                          <div className="text-center border-2 border-dashed rounded-lg p-12">
@@ -225,7 +239,7 @@ export default function DashboardPage() {
                                 <Plus className="mr-2 h-4 w-4" />
                                 Crear mi primer CV
                             </Button>
-                        </div>
+                          </div>
                     )
                 )}
             </div>

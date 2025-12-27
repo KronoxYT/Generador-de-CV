@@ -1,192 +1,59 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
-import { FormProvider, useForm, useFormContext } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import CvEditor from '@/components/cv-editor';
-import CvPreview from '@/components/cv-preview';
-import { Button } from '@/components/ui/button';
-import { Download, FileText, Home, Loader2, Save } from 'lucide-react';
-import { type CvData, cvDataSchema } from '@/lib/types';
-import Link from 'next/link';
-import { UserButton } from '@/components/auth/user-button';
-import { useDoc } from '@/firebase/firestore/use-doc';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { useToast } from '@/hooks/use-toast';
-import { useDebounce } from 'use-debounce';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser, useSupabase } from '@/firebase';
+import { initialData } from '@/lib/initial-data';
 
-function AutoSaver() {
-  const { control, getValues, formState: { isDirty, dirtyFields } } = useFormContext<CvData>();
-  const { cvId } = useParams() as { cvId: string };
-  const firestore = useFirestore();
-  const { user } = useUser();
-  const { toast } = useToast();
-  const [isSaving, setIsSaving] = useState(false);
-
-  const values = getValues();
-  const [debouncedValues] = useDebounce(values, 1500);
+export default function EditorRedirectPage() {
+  const { user, isUserLoading } = useUser();
+  const supabase = useSupabase();
+  const router = useRouter();
+  const [isBusy, setIsBusy] = useState(true);
 
   useEffect(() => {
-    const saveData = async () => {
-      if (isDirty && user && cvId && firestore) {
-        setIsSaving(true);
-        const docRef = doc(firestore, 'users', user.uid, 'cvs', cvId);
-        try {
-          const dataToSave = {
-            ...debouncedValues,
-            lastEdited: serverTimestamp(),
-          };
-          await setDoc(docRef, dataToSave, { merge: true });
-          toast({
-            title: 'Guardado',
-            description: 'Tus cambios se han guardado automáticamente.',
-          });
-        } catch (error) {
-          console.error("Error saving document: ", error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "No se pudieron guardar los cambios.",
-          });
-        } finally {
-          setIsSaving(false);
-        }
+    const run = async () => {
+      if (isUserLoading) return;
+      if (!user) {
+        router.replace('/login');
+        return;
       }
+      if (!supabase) return;
+      const { data, error } = await supabase
+        .from('cvs')
+        .select('id')
+        .eq('user_id', user.uid)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        console.error('Error fetching latest CV:', error);
+      }
+      if (data?.id) {
+        router.replace(`/editor/${data.id}`);
+        return;
+      }
+      const { data: created, error: createError } = await supabase
+        .from('cvs')
+        .insert({
+          title: 'CV sin título',
+          content: initialData,
+          user_id: user.uid,
+        })
+        .select('id')
+        .single();
+      if (createError) {
+        console.error('Error creating CV:', createError);
+        setIsBusy(false);
+        return;
+      }
+      router.replace(`/editor/${created.id}`);
     };
-
-    saveData();
-  }, [debouncedValues, isDirty, user, cvId, firestore, toast]);
-
-  if (isSaving) {
-    return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        Guardando...
-      </div>
-    );
-  }
+    run();
+  }, [isUserLoading, user?.uid]);
 
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-      <Save className="h-4 w-4" />
-      <span>Cambios guardados</span>
+    <div className="flex h-screen items-center justify-center">
+      <p>Cargando editor...</p>
     </div>
   );
-}
-
-
-function EditorPageContent() {
-  const { cvId } = useParams() as { cvId: string };
-  const user = useUser();
-  const firestore = useFirestore();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const [templateColor, setTemplateColor] = useState('#64B5F6');
-  const [font, setFont] = useState<'poppins' | 'pt-sans' | 'inter'>('poppins');
-  
-  const cvDocRef = useMemo(() => {
-    if (user?.user?.uid && cvId && firestore) {
-      return doc(firestore, `users/${user.user.uid}/cvs/${cvId}`);
-    }
-    return null;
-  }, [user?.user?.uid, cvId, firestore]);
-
-  const { data: cvData, isLoading: isLoadingCv } = useDoc<CvData>(cvDocRef as any);
-
-  const methods = useForm<CvData>({
-    resolver: zodResolver(cvDataSchema),
-    mode: 'onBlur',
-  });
-
-  useEffect(() => {
-    if (cvData) {
-      methods.reset(cvData);
-      if(cvData.font) {
-         setFont(cvData.font as any);
-      }
-    }
-  }, [cvData, methods]);
-  
-  useEffect(() => {
-    if (!user.isUserLoading && !user.user) {
-      router.replace('/login');
-    }
-  }, [user.isUserLoading, user.user, router]);
-  
-  const handlePrint = () => {
-    window.print();
-  };
-
-  useEffect(() => {
-    if(searchParams.get('print') === 'true') {
-        setTimeout(() => {
-            handlePrint();
-        }, 500);
-    }
-  }, [searchParams]);
-
-  if (isLoadingCv || user.isUserLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p>Cargando editor...</p>
-      </div>
-    );
-  }
-  
-  return (
-    <FormProvider {...methods}>
-      <div className="min-h-screen bg-background">
-        <header id="header-panel" className="bg-card border-b sticky top-0 z-20">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center gap-3">
-                 <Link href="/dashboard" className="flex items-center gap-3">
-                  <FileText className="h-8 w-8 text-primary" />
-                  <h1 className="text-2xl font-bold font-headline text-foreground">
-                    VitaeForge
-                  </h1>
-                </Link>
-              </div>
-              <div className="hidden md:block">
-                <AutoSaver />
-              </div>
-              <div className='flex gap-4'>
-                 <Link href="/dashboard" passHref>
-                   <Button variant="outline" className="font-headline">
-                    <Home className="mr-2 h-4 w-4" />
-                    Panel
-                  </Button>
-                </Link>
-                <Button onClick={handlePrint} className="font-headline">
-                  <Download className="mr-2 h-4 w-4" />
-                  Descargar PDF
-                </Button>
-                 <UserButton />
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            <div id="editor-panel" className="w-full">
-              <CvEditor setTemplateColor={setTemplateColor} setFont={font => setFont(font as any)} />
-            </div>
-            <div id="preview-panel" className="w-full lg:sticky lg:top-24">
-               <CvPreview templateColor={templateColor} font={font}/>
-            </div>
-          </div>
-        </main>
-      </div>
-    </FormProvider>
-  );
-}
-
-
-export default function EditorPageWrapper() {
-  // useParams can only be used in a Client Component that is a descendant of a page, not the page itself.
-  // So we wrap the main content in another component.
-  return <EditorPageContent />;
 }

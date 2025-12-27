@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useSupabase } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,17 +13,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogIn, User as UserIcon } from 'lucide-react';
-import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
 export function UserButton() {
   const { user, isUserLoading } = useUser();
-  const auth = useAuth();
+  const supabase = useSupabase();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
       router.push('/');
     } catch (error) {
       console.error('Error signing out: ', error);
@@ -59,15 +60,15 @@ export function UserButton() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-9 w-9 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-            <AvatarFallback>{getInitials(user.displayName)}</AvatarFallback>
+            <AvatarImage src={(user as any).photoURL || ''} alt={(user as any).displayName || 'User'} />
+            <AvatarFallback>{getInitials((user as any).displayName)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.displayName}</p>
+            <p className="text-sm font-medium leading-none">{(user as any).displayName || user.email}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>

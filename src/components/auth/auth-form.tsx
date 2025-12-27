@@ -7,16 +7,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from 'firebase/auth';
+import { useSupabase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { FirebaseError } from 'firebase/app';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -28,7 +21,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 export function AuthForm() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const auth = useAuth();
+  const supabase = useSupabase();
   const { toast } = useToast();
   const router = useRouter();
 
@@ -44,35 +37,29 @@ export function AuthForm() {
     setIsLoading(true);
     try {
       if (isSignUp) {
-        await createUserWithEmailAndPassword(auth, data.email, data.password);
+        const { error } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+        });
+        if (error) throw error;
         toast({
           title: '¡Cuenta creada!',
-          description: 'Has sido registrado exitosamente.',
+          description: 'Revisa tu correo para confirmar tu cuenta.',
         });
       } else {
-        await signInWithEmailAndPassword(auth, data.email, data.password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: data.email,
+          password: data.password,
+        });
+        if (error) throw error;
         toast({
           title: '¡Inicio de sesión exitoso!',
         });
       }
-      router.push('/dashboard');
-    } catch (error) {
+      router.push('/editor');
+    } catch (error: any) {
       console.error(error);
-      let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
-      if (error instanceof FirebaseError) {
-        switch (error.code) {
-          case 'auth/email-already-in-use':
-            description = 'Este correo electrónico ya está en uso.';
-            break;
-          case 'auth/user-not-found':
-          case 'auth/wrong-password':
-            description = 'Correo electrónico o contraseña incorrectos.';
-            break;
-          case 'auth/invalid-credential':
-             description = 'Credenciales invalidas.';
-            break;
-        }
-      }
+      const description = typeof error?.message === 'string' ? error.message : 'Ocurrió un error. Por favor, inténtalo de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error de autenticación',
@@ -86,12 +73,12 @@ export function AuthForm() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      if (error) throw error;
       toast({
         title: '¡Inicio de sesión exitoso!',
       });
-      router.push('/dashboard');
+      router.push('/editor');
     } catch (error) {
       console.error(error);
       toast({
