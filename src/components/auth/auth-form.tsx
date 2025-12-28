@@ -73,7 +73,13 @@ export function AuthForm() {
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}` : undefined,
+          scopes: 'openid email profile',
+        },
+      });
       if (error) throw error;
       toast({
         title: '¡Inicio de sesión exitoso!',
