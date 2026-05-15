@@ -1,12 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useSupabase } from '@/firebase';
+import { useAuth } from '@/components/providers/supabase-provider';
+import { supabase } from '@/lib/supabase/client';
 import { initialData } from '@/lib/initial-data';
 
 export default function EditorRedirectPage() {
-  const { user, isUserLoading } = useUser();
-  const supabase = useSupabase();
+  const { user, isUserLoading } = useAuth();
   const router = useRouter();
   const [isBusy, setIsBusy] = useState(true);
 

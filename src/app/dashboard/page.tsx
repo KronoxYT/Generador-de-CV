@@ -1,6 +1,7 @@
 'use client';
 
-import { useUser, useSupabase } from '@/firebase';
+import { useAuth } from '@/components/providers/supabase-provider';
+import { supabase } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
@@ -19,9 +20,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function DashboardPage() {
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading } = useAuth();
   const router = useRouter();
-  const supabase = useSupabase();
   const [cvs, setCvs] = useState<any[] | null>(null);
   const [isLoadingCvs, setIsLoadingCvs] = useState(true);
 
@@ -33,8 +33,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchCvs = async () => {
-      if (!user || !supabase) return;
       setIsLoadingCvs(true);
+      
+      if (!supabase) {
+        // Mock data from localStorage
+        const localData = localStorage.getItem('meavitae_cvs');
+        if (localData) {
+          setCvs(JSON.parse(localData));
+        } else {
+          setCvs([]);
+        }
+        setIsLoadingCvs(false);
+        return;
+      }
+
+      if (!user) return;
       const { data, error } = await supabase
         .from('cvs')
         .select('id,title,content,created_at')
@@ -53,6 +66,21 @@ export default function DashboardPage() {
 
   const handleCreateNewCv = async () => {
     const newCvName = `CV sin título ${cvs ? cvs.length + 1 : 1}`;
+    
+    if (!supabase) {
+      const newCv = {
+        id: crypto.randomUUID(),
+        title: newCvName,
+        content: initialData,
+        created_at: new Date().toISOString(),
+      };
+      const updatedCvs = [newCv, ...(cvs || [])];
+      setCvs(updatedCvs);
+      localStorage.setItem('meavitae_cvs', JSON.stringify(updatedCvs));
+      router.push(`/editor/${newCv.id}`);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('cvs')
@@ -71,9 +99,23 @@ export default function DashboardPage() {
   };
 
   const handleDuplicateCv = async (cvId: string) => {
-    if (!user?.uid) return;
     const originalCvDoc = cvs?.find(cv => cv.id === cvId);
     if (!originalCvDoc) return;
+
+    if (!supabase) {
+      const newCv = {
+        ...originalCvDoc,
+        id: crypto.randomUUID(),
+        title: `${originalCvDoc.title} (copia)`,
+        created_at: new Date().toISOString(),
+      };
+      const updatedCvs = [newCv, ...(cvs || [])];
+      setCvs(updatedCvs);
+      localStorage.setItem('meavitae_cvs', JSON.stringify(updatedCvs));
+      return;
+    }
+
+    if (!user?.uid) return;
     try {
       const { data, error } = await supabase
         .from('cvs')
@@ -93,6 +135,13 @@ export default function DashboardPage() {
 
   const handleDeleteCv = async (cvId: string) => {
     if (window.confirm("¿Estás seguro de que quieres eliminar este CV?")) {
+      if (!supabase) {
+        const updatedCvs = (cvs || []).filter(cv => cv.id !== cvId);
+        setCvs(updatedCvs);
+        localStorage.setItem('meavitae_cvs', JSON.stringify(updatedCvs));
+        return;
+      }
+
       try {
         const { error } = await supabase.from('cvs').delete().eq('id', cvId);
         if (error) throw error;
@@ -122,7 +171,7 @@ export default function DashboardPage() {
                  <Link href="/" className="flex items-center gap-3">
                   <FileText className="h-8 w-8 text-primary" />
                   <h1 className="text-2xl font-bold font-headline text-foreground">
-                    VitaeForge
+                    MeaVitae
                   </h1>
                 </Link>
               </div>

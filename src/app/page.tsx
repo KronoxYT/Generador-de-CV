@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { FileText, ChevronRight, Wand2, Eye, ScanLine, GraduationCap, Briefcase, Code, CheckCircle, Star } from 'lucide-react';
 import Link from 'next/link';
 import { UserButton } from '@/components/auth/user-button';
-import { useUser } from '@/firebase';
+import { useAuth } from '@/components/providers/supabase-provider';
 
 export default function Home() {
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading } = useAuth();
 
   const getEditorLink = () => {
     if (isUserLoading) {
@@ -25,7 +25,7 @@ export default function Home() {
                <Link href="/" className="flex items-center gap-3">
                 <FileText className="h-8 w-8 text-primary" />
                 <h1 className="text-2xl font-bold font-headline text-foreground">
-                  VitaeForge
+                  MeaVitae
                 </h1>
               </Link>
             </div>
@@ -44,7 +44,7 @@ export default function Home() {
               Crea un CV profesional en minutos.
             </h1>
             <h2 className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-              VitaeForge te ayuda a crear, personalizar y descargar un currículum claro, moderno y optimizado para reclutadores y ATS.
+              MeaVitae te ayuda a crear, personalizar y descargar un currículum claro, moderno y optimizado para reclutadores y ATS.
             </h2>
             <div className="flex justify-center gap-4 flex-wrap">
               <Link href={getEditorLink()} passHref>
@@ -187,7 +187,7 @@ export default function Home() {
                     No necesitas un CV perfecto. <br/> Necesitas uno claro, profesional y listo para enviar.
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground mb-8">
-                    VitaeForge te ayuda a llegar ahí más rápido.
+                    MeaVitae te ayuda a llegar ahí más rápido.
                 </p>
                 <Link href={getEditorLink()} passHref>
                   <Button size="lg" className="font-headline h-12 text-lg px-10">

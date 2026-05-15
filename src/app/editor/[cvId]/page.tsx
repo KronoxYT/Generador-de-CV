@@ -9,7 +9,8 @@ import { Download, FileText, Home, Loader2, Save } from 'lucide-react';
 import { type CvData, cvDataSchema } from '@/lib/types';
 import Link from 'next/link';
 import { UserButton } from '@/components/auth/user-button';
-import { useUser, useSupabase } from '@/firebase';
+import { useAuth } from '@/components/providers/supabase-provider';
+import { supabase } from '@/lib/supabase/client';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from 'use-debounce';
@@ -17,8 +18,7 @@ import { useDebounce } from 'use-debounce';
 function AutoSaver() {
   const { control, getValues, formState: { isDirty } } = useFormContext<CvData>();
   const { cvId } = useParams() as { cvId: string };
-  const supabase = useSupabase();
-  const { user } = useUser();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaved, setHasSaved] = useState(true);
@@ -32,11 +32,24 @@ function AutoSaver() {
         setIsSaving(true);
         setHasSaved(false);
         try {
-          const { error } = await supabase
-            .from('cvs')
-            .update({ content: debouncedValues })
-            .eq('id', cvId);
-          if (error) throw error;
+          if (!supabase) {
+            // Save to localStorage
+            const localData = localStorage.getItem('meavitae_cvs');
+            if (localData) {
+              const cvs = JSON.parse(localData);
+              const index = cvs.findIndex((cv: any) => cv.id === cvId);
+              if (index !== -1) {
+                cvs[index].content = debouncedValues;
+                localStorage.setItem('meavitae_cvs', JSON.stringify(cvs));
+              }
+            }
+          } else {
+            const { error } = await supabase
+              .from('cvs')
+              .update({ content: debouncedValues })
+              .eq('id', cvId);
+            if (error) throw error;
+          }
         } catch (error) {
           console.error("Error saving document: ", error);
           toast({
@@ -52,7 +65,7 @@ function AutoSaver() {
     };
 
     saveData();
-  }, [debouncedValues, isDirty, user, cvId, supabase, toast]);
+  }, [debouncedValues, isDirty, user, cvId, toast]);
 
   if (isSaving) {
     return (
@@ -78,8 +91,7 @@ function AutoSaver() {
 
 function EditorPageContent() {
   const { cvId } = useParams() as { cvId: string };
-  const user = useUser();
-  const supabase = useSupabase();
+  const auth = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -90,8 +102,23 @@ function EditorPageContent() {
 
   useEffect(() => {
     const loadCv = async () => {
-      if (!cvId || !supabase) return;
+      if (!cvId) return;
       setIsLoadingCv(true);
+
+      if (!supabase) {
+        // Load from localStorage
+        const localData = localStorage.getItem('meavitae_cvs');
+        if (localData) {
+          const cvs = JSON.parse(localData);
+          const cv = cvs.find((c: any) => c.id === cvId);
+          if (cv) {
+            setCvData((cv.content as CvData) || null);
+          }
+        }
+        setIsLoadingCv(false);
+        return;
+      }
+
       const { data, error } = await supabase.from('cvs').select('id,title,content,created_at,user_id').eq('id', cvId).single();
       if (error) {
         console.error('Error loading CV:', error);
@@ -102,7 +129,7 @@ function EditorPageContent() {
       setIsLoadingCv(false);
     };
     loadCv();
-  }, [cvId, supabase]);
+  }, [cvId]);
 
   const methods = useForm<CvData>({
     resolver: zodResolver(cvDataSchema),
@@ -119,10 +146,10 @@ function EditorPageContent() {
   }, [cvData, methods]);
   
   useEffect(() => {
-    if (!user.isUserLoading && !user.user) {
+    if (!auth.isUserLoading && !auth.user) {
       router.replace('/login');
     }
-  }, [user.isUserLoading, user.user, router]);
+  }, [auth.isUserLoading, auth.user, router]);
   
   const handlePrint = () => {
     // We need to trigger the print after ensuring the state has been updated
@@ -135,7 +162,7 @@ function EditorPageContent() {
     }
   }, [searchParams, isLoadingCv]);
 
-  if (isLoadingCv || user.isUserLoading || !cvData) {
+  if (isLoadingCv || auth.isUserLoading || !cvData) {
     return (
       <div className="flex h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -154,7 +181,7 @@ function EditorPageContent() {
                  <Link href="/dashboard" className="flex items-center gap-3">
                   <FileText className="h-8 w-8 text-primary" />
                   <h1 className="text-2xl font-bold font-headline text-foreground">
-                    VitaeForge
+                    MeaVitae
                   </h1>
                 </Link>
               </div>

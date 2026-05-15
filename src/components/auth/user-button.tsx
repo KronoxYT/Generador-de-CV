@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useUser, useSupabase } from '@/firebase';
+import { useAuth } from '@/components/providers/supabase-provider';
+import { supabase } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,19 +13,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { LogIn, User as UserIcon } from 'lucide-react';
+import { LogIn, User as UserIcon, LayoutDashboard, LogOut } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export function UserButton() {
-  const { user, isUserLoading } = useUser();
-  const supabase = useSupabase();
+  const { user, isUserLoading } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
+      await supabase.auth.signOut();
       router.push('/');
     } catch (error) {
       console.error('Error signing out: ', error);
@@ -76,10 +74,14 @@ export function UserButton() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/dashboard">Dashboard</Link>
+          <Link href="/dashboard" className="flex items-center">
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            Panel de control
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+          <LogOut className="mr-2 h-4 w-4" />
           Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>

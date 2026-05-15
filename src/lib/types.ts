@@ -40,6 +40,7 @@ export const cvDataSchema = z.object({
   experience: z.array(experienceSchema),
   education: z.array(educationSchema),
   skills: z.array(skillSchema),
+  templateId: z.string().optional(),
   font: z.string().optional(),
   lastEdited: z.any().optional(), // Allow serverTimestamp
 });
